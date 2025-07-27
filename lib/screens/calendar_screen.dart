@@ -104,7 +104,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 12.0),
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : Center(
@@ -113,11 +113,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       // 월 표시 상단 영역
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+                        padding: const EdgeInsets.only(bottom: 40.0),
                         child: Text(
                           DateFormat('MM 월').format(_focusedDate),
                           style: TextStyle(
-                            fontFamily: 'OngeulipParkDaHyeon',
+                            fontFamily: 'CookieRun',
                             fontSize: 28,
                             fontWeight: FontWeight.w900,
                             color: Colors.black87,
@@ -128,7 +128,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       // 요일 헤더
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        padding: const EdgeInsets.only(bottom: 8.0),
                         decoration: BoxDecoration(
                           border: Border(
                             bottom: BorderSide(color: Colors.grey.shade300, width: 1),
@@ -141,14 +141,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                       child: Text(
                                         day,
                                         style: TextStyle(
-                                          fontFamily: 'OngeulipParkDaHyeon',
+                                          fontFamily: 'CookieRun',
                                           fontWeight: FontWeight.w900,
                                           fontSize: 16,
-                                          color: day == 'SUN' 
-                                              ? Colors.red 
-                                              : day == 'SAT' 
-                                                  ? Colors.blue 
-                                                  : Colors.black87,
+                                          color: Colors.black87,
                                         ),
                                       ),
                                     ),
@@ -239,7 +235,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   child: Text(
                     '${cellDate.day}',
                     style: TextStyle(
-                      fontFamily: 'OngeulipParkDaHyeon',
+                      fontFamily: 'CookieRun',
                       fontSize: 16,
                       fontWeight: isToday ? FontWeight.w900 : FontWeight.w600,
                       color: isCurrentMonth 
@@ -257,7 +253,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     child: Text(
                       entriesForDate.first.title,
                       style: TextStyle(
-                        fontFamily: 'OngeulipParkDaHyeon',
+                        fontFamily: 'CookieRun',
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                         color: Colors.black87,
@@ -276,6 +272,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     
     return GridView.count(
       crossAxisCount: 7,
+      childAspectRatio: 48 / 84, // 48:84 비율로 설정
       children: cells,
     );
   }

@@ -103,3 +103,11 @@ flutter:
     - family: OngeulipParkDaHyeon
       fonts:
         - asset: assets/fonts/온글잎 박다현체.ttf
+    - family: CookieRun
+      fonts:
+        - asset: assets/fonts/CookieRun Regular.ttf
+          weight: 400
+        - asset: assets/fonts/CookieRun Bold.ttf
+          weight: 700
+        - asset: assets/fonts/CookieRun Black.ttf
+          weight: 900
