@@ -102,88 +102,53 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          DateFormat('yyyy년 M월').format(_focusedDate),
-          style: const TextStyle(fontWeight: FontWeight.bold),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Center(
+                  child: Column(
+                    children: [
+                      // 요일 헤더
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
+                        child: Row(
+                          children: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+                              .map((day) => Expanded(
+                                    child: Center(
+                                      child: Text(
+                                        day,
+                                        style: TextStyle(
+                                          fontFamily: 'OngeulipParkDaHyeon',
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 16,
+                                          color: day == 'SUN' 
+                                              ? Colors.red 
+                                              : day == 'SAT' 
+                                                  ? Colors.blue 
+                                                  : Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                      // 캘린더 그리드
+                      Expanded(
+                        child: _buildCalendarGrid(),
+                      ),
+                    ],
+                  ),
+                ),
         ),
-        backgroundColor: Colors.blue.shade50,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left),
-            onPressed: () {
-              setState(() {
-                _focusedDate = DateTime(_focusedDate.year, _focusedDate.month - 1);
-              });
-            },
-            tooltip: '이전 달',
-          ),
-          IconButton(
-            icon: const Icon(Icons.today),
-            onPressed: () {
-              setState(() {
-                _focusedDate = DateTime.now();
-                _selectedDate = DateTime.now();
-              });
-            },
-            tooltip: '오늘로 이동',
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            onPressed: () {
-              setState(() {
-                _focusedDate = DateTime(_focusedDate.year, _focusedDate.month + 1);
-              });
-            },
-            tooltip: '다음 달',
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadEntries,
-            tooltip: '새로고침',
-          ),
-        ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // 요일 헤더
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey.shade300),
-                    ),
-                  ),
-                  child: Row(
-                    children: ['일', '월', '화', '수', '목', '금', '토']
-                        .map((day) => Expanded(
-                              child: Center(
-                                child: Text(
-                                  day,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: day == '일' 
-                                        ? Colors.red 
-                                        : day == '토' 
-                                            ? Colors.blue 
-                                            : Colors.black87,
-                                  ),
-                                ),
-                              ),
-                            ))
-                        .toList(),
-                  ),
-                ),
-                // 캘린더 그리드
-                Expanded(
-                  child: _buildCalendarGrid(),
-                ),
-              ],
-            ),
     );
   }
 
@@ -239,21 +204,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
           onTap: () => _onDaySelected(cellDate, _focusedDate),
           child: Container(
             decoration: BoxDecoration(
+              // 이미지 테두리 사용 예시 (이미지가 있다면)
+              // border: Border.all(color: Colors.grey.shade300, width: 0.5),
+              // 또는 이미지 배경 사용
+              // image: DecorationImage(
+              //   image: AssetImage('assets/images/calendar_cell_bg.png'),
+              //   fit: BoxFit.cover,
+              // ),
+              // 현재는 일반 테두리 사용
               border: Border.all(color: Colors.grey.shade300, width: 0.5),
-              color: isSelected 
-                  ? Colors.blue.shade100 
-                  : isToday 
-                      ? Colors.orange.shade50 
-                      : Colors.white,
             ),
-            child: Column(
+            child: Stack(
               children: [
-                // 날짜 표시
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                // 날짜 표시 (좌측상단)
+                Positioned(
+                  top: 4,
+                  left: 4,
                   child: Text(
                     '${cellDate.day}',
                     style: TextStyle(
+                      fontFamily: 'OngeulipParkDaHyeon',
                       fontSize: 14,
                       fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                       color: isCurrentMonth 
@@ -262,15 +232,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ),
                   ),
                 ),
-                // 일기 제목 표시
+                // 일기 제목 표시 (중앙)
                 if (entriesForDate.isNotEmpty)
-                  Expanded(
+                  Center(
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
                       child: Text(
                         entriesForDate.first.title,
-                        style: const TextStyle(
+                        style: TextStyle(
+                          fontFamily: 'OngeulipParkDaHyeon',
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
                         ),
