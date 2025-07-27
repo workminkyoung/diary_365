@@ -110,12 +110,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
               : Center(
                   child: Column(
                     children: [
+                      // 월 표시 상단 영역
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+                        child: Text(
+                          DateFormat('MM 월').format(_focusedDate),
+                          style: TextStyle(
+                            fontFamily: 'OngeulipParkDaHyeon',
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.black87,
+                          ),
+                          textAlign: TextAlign.left,
+                        ),
+                      ),
                       // 요일 헤더
                       Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
                         decoration: BoxDecoration(
                           border: Border(
-                            bottom: BorderSide(color: Colors.grey.shade300),
+                            bottom: BorderSide(color: Colors.grey.shade300, width: 1),
                           ),
                         ),
                         child: Row(
@@ -218,37 +234,37 @@ class _CalendarScreenState extends State<CalendarScreen> {
               children: [
                 // 날짜 표시 (좌측상단)
                 Positioned(
-                  top: 4,
-                  left: 4,
+                  top: 6,
+                  left: 6,
                   child: Text(
                     '${cellDate.day}',
                     style: TextStyle(
                       fontFamily: 'OngeulipParkDaHyeon',
-                      fontSize: 14,
-                      fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 16,
+                      fontWeight: isToday ? FontWeight.w900 : FontWeight.w600,
                       color: isCurrentMonth 
                           ? (isToday ? Colors.orange : Colors.black87)
                           : Colors.grey.shade400,
                     ),
                   ),
                 ),
-                // 일기 제목 표시 (중앙)
+                // 일기 제목 표시 (중앙 하단)
                 if (entriesForDate.isNotEmpty)
-                  Center(
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-                      child: Text(
-                        entriesForDate.first.title,
-                        style: TextStyle(
-                          fontFamily: 'OngeulipParkDaHyeon',
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
+                  Positioned(
+                    bottom: 8,
+                    left: 4,
+                    right: 4,
+                    child: Text(
+                      entriesForDate.first.title,
+                      style: TextStyle(
+                        fontFamily: 'OngeulipParkDaHyeon',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
                     ),
                   ),
               ],
