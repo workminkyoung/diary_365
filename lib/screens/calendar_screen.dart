@@ -17,11 +17,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime? _selectedDate;
   List<DiaryEntry> _entries = [];
   bool _isLoading = true;
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
+    _selectedDate = _focusedDate;
+    // PageController를 먼저 초기화합니다.
+    _pageController = PageController(initialPage: 1200);
+    // 그 다음에 데이터 로딩을 시작합니다.
     _loadEntries();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadEntries() async {
@@ -50,31 +61,33 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  void _onDaySelected(DateTime selectedDate, DateTime focusedDate) {
-    setState(() {
-      _selectedDate = selectedDate;
-      _focusedDate = focusedDate;
-    });
+  void _onDaySelected(DateTime date, DateTime focusedDate) async {
+    // 날짜를 탭했을 때, PageView의 현재 월과 다른 월의 날짜라면 PageView를 해당 월로 이동시킵니다.
+    if (date.month != _focusedDate.month || date.year != _focusedDate.year) {
+      final now = DateTime.now();
+      final currentMonth = now.year * 12 + now.month;
+      final selectedMonth = date.year * 12 + date.month;
+      final page = 1200 + (selectedMonth - currentMonth);
+      _pageController.jumpToPage(page);
+    }
     
-    // 해당 날짜의 일기 작성 화면으로 이동
-    _navigateToWriteScreen(selectedDate);
-  }
+    setState(() {
+      _selectedDate = date;
+      // _focusedDate는 PageView가 제어하므로 여기서는 변경하지 않습니다.
+    });
 
-  Future<void> _navigateToWriteScreen(DateTime date) async {
-    // 해당 날짜에 이미 일기가 있는지 확인
-    final existingEntry = _entries.firstWhere(
-      (entry) => entry.date.year == date.year &&
-                  entry.date.month == date.month &&
-                  entry.date.day == date.day,
-      orElse: () => DiaryEntry(
-        id: '',
-        title: '',
-        content: '',
-        date: date,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-    );
+    final entriesForDate = _getEntriesForDate(date);
+    // 해당 날짜에 일기가 없으면 새로운 DiaryEntry 객체를 생성합니다.
+    final existingEntry = entriesForDate.isNotEmpty 
+        ? entriesForDate.first 
+        : DiaryEntry(
+            id: '', // 새 일기이므로 id는 비워둡니다.
+            title: '',
+            content: '',
+            date: date,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
 
     final result = await Navigator.push(
       context,
@@ -87,7 +100,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
 
     if (result == true) {
-      // 일기가 저장되었으면 목록을 새로고침
       _loadEntries();
     }
   }
@@ -103,123 +115,150 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 12.0),
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Center(
-                  child: Column(
-                    children: [
-                      // 월 표시 상단 영역
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.only(bottom: 40.0),
-                        child: Text(
-                          DateFormat('MM 월').format(_focusedDate),
-                          style: TextStyle(
-                            fontFamily: 'CookieRun',
-                            fontSize: 28,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.black87,
-                          ),
-                          textAlign: TextAlign.left,
-                        ),
-                      ),
-                      // 요일 헤더
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Row(
-                          children: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
-                              .map((day) => Expanded(
-                                    child: Center(
-                                      child: Text(
-                                        day,
-                                        style: TextStyle(
-                                          fontFamily: 'CookieRun',
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 16,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                    ),
-                                  ))
-                              .toList(),
-                        ),
-                      ),
-                      // 캘린더 그리드
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final double gridWidth = constraints.maxWidth;
-                            final double cellWidth = gridWidth / 7;
-                            final double cellHeight = cellWidth / (48 / 84);
-                            final double gridHeight = cellHeight * 6;
-                            
-                            return SizedBox(
-                              width: gridWidth,
-                              height: gridHeight,
-                              child: Stack(
-                                children: [
-                                  _buildCalendarGrid(),
-                                  // 모든 가로 라인 이미지들
-                                  ...List.generate(5, (index) {
-                                    return Positioned(
-                                      top: cellHeight * (index + 1), // 각 줄 사이
-                                      left: 0,
-                                      right: 0,
-                                      child: Transform.rotate(
-                                        angle: 0, // 회전 없음 (원래 방향)
-                                        child: Image.asset(
-                                          'assets/images/hori.png',
-                                          fit: BoxFit.fitWidth,
-                                        ),
-                                      ),
-                                    );
-                                  }),
-                                  // 모든 세로 라인 이미지들
-                                  ...List.generate(6, (index) {
-                                    return Positioned(
-                                      top: 0,
-                                      left: cellWidth * (index + 1), // 각 열 사이
-                                      child: Transform.rotate(
-                                        angle: 0, // 회전 없음 (원래 방향)
-                                        child: Image.asset(
-                                          'assets/images/verti.png',
-                                          fit: BoxFit.none,
-                                        ),
-                                      ),
-                                    );
-                                  }),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+        child: PageView.builder(
+          controller: _pageController,
+          onPageChanged: (page) {
+            final now = DateTime.now();
+            // 페이지 인덱스를 기반으로 현재 표시해야 할 월을 계산합니다.
+            final newFocusedDate = DateTime(now.year, now.month + (page - 1200), 1);
+
+            // 월이 변경되었을 경우에만 상태를 업데이트하고 데이터를 새로 로드합니다.
+            if (newFocusedDate.year != _focusedDate.year || newFocusedDate.month != _focusedDate.month) {
+              setState(() {
+                _focusedDate = newFocusedDate;
+                _isLoading = true;
+              });
+              _loadEntries();
+            }
+          },
+          itemBuilder: (context, index) {
+            final now = DateTime.now();
+            // 각 페이지에 해당하는 월을 계산합니다.
+            final pageDate = DateTime(now.year, now.month + (index - 1200), 1);
+            
+            // 로딩 중이거나, 현재 페이지가 로딩이 필요한 월인 경우 로딩 인디케이터를 표시합니다.
+            if (_isLoading && pageDate.year == _focusedDate.year && pageDate.month == _focusedDate.month) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            return _buildMonthView(pageDate);
+          },
         ),
       ),
     );
   }
 
-  Widget _buildCalendarGrid() {
-    final firstDayOfMonth = DateTime(_focusedDate.year, _focusedDate.month, 1);
+  // 월별 뷰를 구성하는 위젯
+  Widget _buildMonthView(DateTime dateForMonth) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 12.0),
+      child: Center(
+        child: Column(
+          children: [
+            // 월 표시 헤더
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.only(bottom: 40.0),
+              child: Text(
+                DateFormat('MM 월').format(dateForMonth),
+                style: TextStyle(
+                  fontFamily: 'CookieRun',
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.left,
+              ),
+            ),
+            // 요일 헤더
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Row(
+                children: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+                    .map((day) => Expanded(
+                          child: Center(
+                            child: Text(
+                              day,
+                              style: TextStyle(
+                                fontFamily: 'CookieRun',
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ),
+            // 캘린더 그리드와 라인
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final double gridWidth = constraints.maxWidth;
+                  final double cellWidth = gridWidth / 7;
+                  final double cellHeight = cellWidth / (48 / 84);
+                  final double gridHeight = cellHeight * 6;
+                  
+                  return SizedBox(
+                    width: gridWidth,
+                    height: gridHeight,
+                    child: Stack(
+                      children: [
+                        _buildCalendarGrid(dateForMonth),
+                        // 모든 가로 라인 이미지들
+                        ...List.generate(5, (index) {
+                          return Positioned(
+                            top: cellHeight * (index + 1),
+                            left: 0,
+                            right: 0,
+                            child: Transform.rotate(
+                              angle: 0,
+                              child: Image.asset(
+                                'assets/images/hori.png',
+                                fit: BoxFit.fitWidth,
+                              ),
+                            ),
+                          );
+                        }),
+                        // 모든 세로 라인 이미지들
+                        ...List.generate(6, (index) {
+                          return Positioned(
+                            top: 0,
+                            left: cellWidth * (index + 1),
+                            child: Transform.rotate(
+                              angle: 0,
+                              child: Image.asset(
+                                'assets/images/verti.png',
+                                fit: BoxFit.none,
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalendarGrid(DateTime displayDate) {
+    final firstDayOfMonth = DateTime(displayDate.year, displayDate.month, 1);
     
-    // 달력의 첫 번째 칸(일요일)에 해당하는 정확한 날짜를 계산합니다.
-    // 예: 7월 1일이 화요일(weekday=2)이면, 1일에서 2일을 빼서 6월 29일(일요일)을 구합니다.
-    // (DateTime.weekday는 월=1, ..., 일=7 이므로, 일요일(7)은 0으로 맞춰주기 위해 나머지 연산자(%)를 사용합니다.)
     final firstDayOfGrid = firstDayOfMonth.subtract(Duration(days: firstDayOfMonth.weekday % 7));
 
     final totalCells = 42;
     final cells = <Widget>[];
 
     for (int i = 0; i < totalCells; i++) {
-      // 첫 날짜부터 하루씩 더해가며 각 셀의 날짜를 계산합니다.
       final DateTime cellDate = firstDayOfGrid.add(Duration(days: i));
-      final bool isCurrentMonth = cellDate.month == _focusedDate.month;
+      final bool isCurrentMonth = cellDate.month == displayDate.month;
       
       final isToday = cellDate.year == DateTime.now().year &&
                       cellDate.month == DateTime.now().month &&
@@ -234,7 +273,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       
       cells.add(
         GestureDetector(
-          onTap: () => _onDaySelected(cellDate, _focusedDate),
+          onTap: () => _onDaySelected(cellDate, displayDate),
                       child: Container(
             child: Stack(
               children: [
@@ -283,6 +322,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return GridView.count(
       crossAxisCount: 7,
       childAspectRatio: 48 / 84, // 48:84 비율로 설정
+      physics: const NeverScrollableScrollPhysics(), // PageView 내부 스크롤 비활성화
       children: cells,
     );
   }
