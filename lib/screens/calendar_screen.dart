@@ -207,39 +207,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildCalendarGrid() {
     final firstDayOfMonth = DateTime(_focusedDate.year, _focusedDate.month, 1);
-    final lastDayOfMonth = DateTime(_focusedDate.year, _focusedDate.month + 1, 0);
-    final firstWeekday = firstDayOfMonth.weekday;
-    final daysInMonth = lastDayOfMonth.day;
     
-    // 이전 달의 마지막 날짜들
-    final previousMonth = DateTime(_focusedDate.year, _focusedDate.month - 1, 0);
-    final daysInPreviousMonth = previousMonth.day;
-    
-    // 다음 달의 첫 번째 날짜들
-    final nextMonthStart = DateTime(_focusedDate.year, _focusedDate.month + 1, 1);
-    
-    // 전체 그리드에 필요한 셀 수 계산 (6주 * 7일 = 42개)
+    // 달력의 첫 번째 칸(일요일)에 해당하는 정확한 날짜를 계산합니다.
+    // 예: 7월 1일이 화요일(weekday=2)이면, 1일에서 2일을 빼서 6월 29일(일요일)을 구합니다.
+    // (DateTime.weekday는 월=1, ..., 일=7 이므로, 일요일(7)은 0으로 맞춰주기 위해 나머지 연산자(%)를 사용합니다.)
+    final firstDayOfGrid = firstDayOfMonth.subtract(Duration(days: firstDayOfMonth.weekday % 7));
+
     final totalCells = 42;
     final cells = <Widget>[];
-    
+
     for (int i = 0; i < totalCells; i++) {
-      DateTime cellDate;
-      bool isCurrentMonth = false;
-      
-      if (i < firstWeekday) {
-        // 이전 달
-        final day = daysInPreviousMonth - firstWeekday + i + 1;
-        cellDate = DateTime(_focusedDate.year, _focusedDate.month - 1, day);
-      } else if (i >= firstWeekday && i < firstWeekday + daysInMonth) {
-        // 현재 달
-        final day = i - firstWeekday + 1;
-        cellDate = DateTime(_focusedDate.year, _focusedDate.month, day);
-        isCurrentMonth = true;
-      } else {
-        // 다음 달
-        final day = i - firstWeekday - daysInMonth + 1;
-        cellDate = DateTime(_focusedDate.year, _focusedDate.month + 1, day);
-      }
+      // 첫 날짜부터 하루씩 더해가며 각 셀의 날짜를 계산합니다.
+      final DateTime cellDate = firstDayOfGrid.add(Duration(days: i));
+      final bool isCurrentMonth = cellDate.month == _focusedDate.month;
       
       final isToday = cellDate.year == DateTime.now().year &&
                       cellDate.month == DateTime.now().month &&
