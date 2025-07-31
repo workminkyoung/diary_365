@@ -129,11 +129,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.only(bottom: 8.0),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(color: Colors.grey.shade300, width: 1),
-                          ),
-                        ),
                         child: Row(
                           children: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
                               .map((day) => Expanded(
@@ -154,7 +149,53 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       ),
                       // 캘린더 그리드
                       Expanded(
-                        child: _buildCalendarGrid(),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final double gridWidth = constraints.maxWidth;
+                            final double cellWidth = gridWidth / 7;
+                            final double cellHeight = cellWidth / (48 / 84);
+                            final double gridHeight = cellHeight * 6;
+                            
+                            return SizedBox(
+                              width: gridWidth,
+                              height: gridHeight,
+                              child: Stack(
+                                children: [
+                                  _buildCalendarGrid(),
+                                  // 모든 가로 라인 이미지들
+                                  ...List.generate(5, (index) {
+                                    return Positioned(
+                                      top: cellHeight * (index + 1), // 각 줄 사이
+                                      left: 0,
+                                      right: 0,
+                                      child: Transform.rotate(
+                                        angle: 0, // 회전 없음 (원래 방향)
+                                        child: Image.asset(
+                                          'assets/images/hori.png',
+                                          fit: BoxFit.fitWidth,
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                  // 모든 세로 라인 이미지들
+                                  ...List.generate(6, (index) {
+                                    return Positioned(
+                                      top: 0,
+                                      left: cellWidth * (index + 1), // 각 열 사이
+                                      child: Transform.rotate(
+                                        angle: 0, // 회전 없음 (원래 방향)
+                                        child: Image.asset(
+                                          'assets/images/verti.png',
+                                          fit: BoxFit.none,
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -214,18 +255,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       cells.add(
         GestureDetector(
           onTap: () => _onDaySelected(cellDate, _focusedDate),
-          child: Container(
-            decoration: BoxDecoration(
-              // 이미지 테두리 사용 예시 (이미지가 있다면)
-              // border: Border.all(color: Colors.grey.shade300, width: 0.5),
-              // 또는 이미지 배경 사용
-              // image: DecorationImage(
-              //   image: AssetImage('assets/images/calendar_cell_bg.png'),
-              //   fit: BoxFit.cover,
-              // ),
-              // 현재는 일반 테두리 사용
-              border: Border.all(color: Colors.grey.shade300, width: 0.5),
-            ),
+                      child: Container(
             child: Stack(
               children: [
                 // 날짜 표시 (좌측상단)
