@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../models/diary_entry.dart';
 import '../services/diary_service.dart';
 
 class DiaryWriteScreen extends StatefulWidget {
-  final DiaryEntry? entry; // For editing existing entries
-  final DateTime? selectedDate; // For creating new entries with specific date
-  
+  final DiaryEntry? entry;
+  final DateTime? selectedDate;
+
   const DiaryWriteScreen({super.key, this.entry, this.selectedDate});
 
   @override
@@ -14,281 +13,167 @@ class DiaryWriteScreen extends StatefulWidget {
 }
 
 class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   final _diaryService = DiaryService();
   
-  DateTime _selectedDate = DateTime.now();
-  String? _selectedMood;
-  bool _isLoading = false;
+  late DateTime _selectedDate;
   
-  final List<String> _moods = [
-    '😊 행복',
-    '😢 슬픔',
-    '😡 화남',
-    '😌 평온',
-    '😴 피곤',
-    '🤔 고민',
-    '😍 설렘',
-    '😤 스트레스',
-    '😎 자신감',
-    '😰 불안',
-  ];
+  // 디버깅용 아웃라인 표시 여부
+  bool _showDebugOutlines = true;
 
   @override
   void initState() {
     super.initState();
+    // 기존 일기를 수정하는 경우, 해당 내용을 컨트롤러에 설정합니다.
     if (widget.entry != null) {
-      // Editing existing entry
-      _titleController.text = widget.entry!.title;
       _contentController.text = widget.entry!.content;
       _selectedDate = widget.entry!.date;
-      _selectedMood = widget.entry!.mood;
-    } else if (widget.selectedDate != null) {
-      // Creating new entry with specific date
-      _selectedDate = widget.selectedDate!;
+    } else {
+      // 새 일기를 작성하는 경우, 전달받은 날짜나 현재 날짜를 사용합니다.
+      _selectedDate = widget.selectedDate ?? DateTime.now();
     }
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
+    // 화면이 닫힐 때, 컨트롤러의 내용이 비어있지 않다면 자동 저장합니다.
+    _autoSave();
     _contentController.dispose();
     super.dispose();
   }
 
-  Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
-      locale: const Locale('ko', 'KR'),
-    );
-    
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
-  }
-
-  Future<void> _saveDiary() async {
-    if (!_formKey.currentState!.validate()) {
+  Future<void> _autoSave() async {
+    final content = _contentController.text.trim();
+    if (content.isEmpty) {
+      // 내용이 비어있으면 저장하지 않습니다.
+      // 만약 기존에 내용이 있었는데 모두 지운 경우, 삭제 처리를 할 수도 있습니다.
+      // 현재는 내용이 없으면 아무것도 하지 않는 것으로 구현합니다.
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
       final now = DateTime.now();
+      // 기존 일기이거나, 새 일기이지만 id가 없는 경우를 모두 처리합니다.
+      final entryId = widget.entry?.id ?? _diaryService.generateId();
+      
       final entry = DiaryEntry(
-        id: widget.entry?.id ?? _diaryService.generateId(),
-        title: _titleController.text.trim(),
-        content: _contentController.text.trim(),
+        id: entryId,
+        // 제목은 이제 사용하지 않으므로, 내용의 첫 줄을 제목으로 사용하거나 비워둡니다.
+        title: content.split('\n').first, 
+        content: content,
         date: _selectedDate,
-        mood: _selectedMood,
         createdAt: widget.entry?.createdAt ?? now,
         updatedAt: now,
       );
 
       await _diaryService.saveEntry(entry);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.entry != null ? '일기가 수정되었습니다.' : '일기가 저장되었습니다.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context, true); // Return true to indicate success
-      }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('저장 중 오류가 발생했습니다.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      // 자동 저장이므로 사용자에게 오류를 표시하기보다는 로깅을 하는 것이 좋습니다.
+      print('Auto-save failed: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.entry != null ? '일기 수정' : '새 일기 작성'),
-        backgroundColor: Colors.blue.shade50,
-        elevation: 0,
-        actions: [
-          if (!_isLoading)
-            TextButton(
-              onPressed: _saveDiary,
-              child: const Text(
-                '저장',
-                style: TextStyle(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Date Selection
-                    Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.calendar_today, color: Colors.blue),
-                        title: const Text('날짜'),
-                        subtitle: Text(
-                          DateFormat('yyyy년 MM월 dd일 (E)', 'ko_KR').format(_selectedDate),
+              body: SafeArea(
+          child: Padding(
+            // 요청하신 대로 top: 60, 좌우 12의 패딩을 적용합니다.
+            padding: const EdgeInsets.only(top: 60, left: 12, right: 12, bottom: 12),
+            child: Column(
+              children: [
+                // cellStroke 이미지 영역 (타이틀 + 내용입력)
+                Expanded(
+                  child: Stack(
+                    children: [
+                      // 배경 이미지들
+                      Positioned.fill(
+                        child: Image.asset(
+                          'assets/images/cellBG.png',
+                          fit: BoxFit.fill,
                         ),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: _selectDate,
                       ),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Title Input
-                    TextFormField(
-                      controller: _titleController,
-                      decoration: const InputDecoration(
-                        labelText: '제목',
-                        hintText: '오늘의 제목을 입력하세요',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.title),
+                      Positioned.fill(
+                        child: Image.asset(
+                          'assets/images/cellStroke.png',
+                          fit: BoxFit.fill,
+                        ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return '제목을 입력해주세요';
-                        }
-                        return null;
-                      },
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Mood Selection
-                    const Text(
-                      '오늘의 기분',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _moods.map((mood) {
-                        final isSelected = _selectedMood == mood;
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedMood = isSelected ? null : mood;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
+                      // 타이틀 영역
+                      Positioned(
+                        top: 16,
+                        left: 16,
+                        right: 16,
+                        height: 60, // 타이틀 영역 높이
+                        child: Container(
+                          decoration: _showDebugOutlines 
+                              ? BoxDecoration(
+                                  border: Border.all(color: Colors.red, width: 2), // 디버깅용 빨간색 아웃라인
+                                )
+                              : null,
+                          child: const TextField(
+                            decoration: InputDecoration(
+                              hintText: '제목을 입력하세요...',
+                              border: InputBorder.none,
+                              filled: false,
                             ),
-                            decoration: BoxDecoration(
-                              color: isSelected ? Colors.blue : Colors.grey.shade200,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isSelected ? Colors.blue : Colors.grey.shade300,
-                              ),
-                            ),
-                            child: Text(
-                              mood,
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : Colors.black87,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              ),
+                            style: TextStyle(
+                              fontFamily: 'CookieRun',
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        );
-                      }).toList(),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Content Input
-                    TextFormField(
-                      controller: _contentController,
-                      maxLines: 15,
-                      decoration: const InputDecoration(
-                        labelText: '내용',
-                        hintText: '오늘 있었던 일들을 자유롭게 적어보세요...',
-                        border: OutlineInputBorder(),
-                        alignLabelWithHint: true,
+                        ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return '내용을 입력해주세요';
-                        }
-                        return null;
-                      },
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Save Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _saveDiary,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      // 내용 입력 영역
+                      Positioned(
+                        top: 92, // 타이틀 영역 아래 (16 + 60 + 16)
+                        left: 16,
+                        right: 16,
+                        bottom: 16,
+                        child: Container(
+                          decoration: _showDebugOutlines 
+                              ? BoxDecoration(
+                                  border: Border.all(color: Colors.blue, width: 2), // 디버깅용 파란색 아웃라인
+                                )
+                              : null,
+                          child: TextFormField(
+                            controller: _contentController,
+                            maxLines: null,
+                            expands: true,
+                            decoration: const InputDecoration(
+                              hintText: '오늘 있었던 일들을 자유롭게 적어보세요...',
+                              border: InputBorder.none,
+                              filled: false,
+                            ),
+                            style: const TextStyle(
+                              fontFamily: 'CookieRun',
+                              fontSize: 16,
+                            ),
+                            autofocus: true,
                           ),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : Text(
-                                widget.entry != null ? '수정하기' : '저장하기',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                // 팁 텍스트 (cellStroke 영역 밖)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, left: 27, right: 27),
+                  child: Text(
+                    '팁. ♤ ♧ † £ ¢ 특수기호 입력하면 고양이들이 나와요!',
+                    style: TextStyle(
+                      fontFamily: 'CookieRun',
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+              ],
             ),
+          ),
+        ),
     );
   }
 } 
